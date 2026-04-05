@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Player 4EVER 🎧</title>
+
+    <style>
+        body {
+            margin: 0;
+            background: linear-gradient(black, purple);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            color: white;
+            font-family: Arial;
+        }
+
+        .player {
+            background: #111;
+            padding: 25px;
+            border-radius: 20px;
+            width: 320px;
+            text-align: center;
+            box-shadow: 0 0 20px purple;
+        }
+
+        img {
+            width: 100%;
+            border-radius: 15px;
+        }
+
+        h1 {
+            margin: 10px 0;
+        }
+
+        .controls button {
+            margin: 5px;
+            padding: 10px;
+            border: none;
+            background: purple;
+            color: white;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+
+        input[type="range"] {
+            width: 100%;
+        }
+    </style>
+
+</head>
+<body>
+
+<div class="player">
+
+    <!-- 🔧 EDITÁVEL -->
+    <img src="capa.jpg">
+    <h1 id="titulo">4EVER 🎧</h1>
+    <p id="artista">Lukas</p>
+
+    <audio id="musica">
+        <source src="4ever.mp3" type="audio/mpeg">
+    </audio>
+
+    <!-- BOTÕES -->
+    <div class="controls">
+        <button onclick="play()">▶️</button>
+        <button onclick="pause()">⏸</button>
+    </div>
+
+    <!-- BARRA DE PROGRESSO -->
+    <input type="range" id="progresso" value="0">
+
+    <!-- VOLUME -->
+    <p>Volume</p>
+    <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
+
+    <p id="tempo">00:00</p>
+
+</div>
+
+<script>
+
+let musica = document.getElementById("musica");
+let progresso = document.getElementById("progresso");
+let volume = document.getElementById("volume");
+
+function play() {
+    musica.play();
+}
+
+function pause() {
+    musica.pause();
+}
+
+// Atualiza progresso
+musica.addEventListener("timeupdate", () => {
+    progresso.value = (musica.currentTime / musica.duration) * 100;
+
+    let min = Math.floor(musica.currentTime / 60);
+    let sec = Math.floor(musica.currentTime % 60);
+    if(sec < 10) sec = "0" + sec;
+
+    document.getElementById("tempo").innerText = min + ":" + sec;
+});
+
+// Controlar barra
+progresso.addEventListener("input", () => {
+    musica.currentTime = (progresso.value / 100) * musica.duration;
+});
+
+// Volume
+volume.addEventListener("input", () => {
+    musica.volume = volume.value;
+});
+
+</script>
+
+</body>
+</html>
