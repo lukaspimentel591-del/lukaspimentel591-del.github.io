@@ -1,68 +1,145 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>FPS 3D 🔫</title>
-    <style>
-        body { margin: 0; overflow: hidden; }
-        #btn {
-            position: fixed;
-            bottom: 20px;
-            left: 20px;
-            padding: 15px;
-            background: red;
-            color: white;
-            border-radius: 10px;
-        }
-    </style>
+<title>FPS 3D COMPLETO 🔥</title>
+<style>
+body { margin:0; overflow:hidden; background:black; }
+
+#shoot { position:fixed; bottom:20px; right:20px; padding:20px; background:red; color:white; border-radius:50%; }
+#jump { position:fixed; bottom:20px; left:20px; padding:20px; background:blue; color:white; border-radius:50%; }
+#hud { position:fixed; top:10px; left:10px; color:white; }
+
+</style>
 </head>
 <body>
 
-<div id="btn">ATIRAR 🔫</div>
+<div id="shoot">🔫</div>
+<div id="jump">⬆️</div>
+<div id="hud">Score: 0 | Vida: 100</div>
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
 let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight,0.1,1000);
 let renderer = new THREE.WebGLRenderer();
-
-renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.setSize(innerWidth,innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // chão
-let floorGeo = new THREE.PlaneGeometry(50, 50);
-let floorMat = new THREE.MeshBasicMaterial({color: 0x00ff00});
-let floor = new THREE.Mesh(floorGeo, floorMat);
-floor.rotation.x = -Math.PI / 2;
+let floor = new THREE.Mesh(
+    new THREE.PlaneGeometry(200,200),
+    new THREE.MeshBasicMaterial({color:0x333333})
+);
+floor.rotation.x = -Math.PI/2;
 scene.add(floor);
 
-// inimigo
-let enemyGeo = new THREE.BoxGeometry();
-let enemyMat = new THREE.MeshBasicMaterial({color: 0xff0000});
-let enemy = new THREE.Mesh(enemyGeo, enemyMat);
-enemy.position.z = -5;
-scene.add(enemy);
+// paredes
+for(let i=0;i<10;i++){
+    let wall = new THREE.Mesh(
+        new THREE.BoxGeometry(5,5,1),
+        new THREE.MeshBasicMaterial({color:0x555555})
+    );
+    wall.position.set(Math.random()*50-25,2,-Math.random()*50);
+    scene.add(wall);
+}
 
+// player
 camera.position.y = 2;
+let velocityY = 0;
+let vida = 100;
+let score = 0;
 
-// botão tiro (funciona no iPhone)
-document.getElementById("btn").onclick = () => {
-    if (enemy.position.z < -1) {
-        enemy.position.z += 1;
-    } else {
-        enemy.position.z = -10;
+// inimigos
+let enemies=[];
+function spawnEnemy(){
+    let e = new THREE.Mesh(
+        new THREE.BoxGeometry(),
+        new THREE.MeshBasicMaterial({color:0xff0000})
+    );
+    e.position.set(Math.random()*40-20,1,-30);
+    scene.add(e);
+    enemies.push(e);
+}
+setInterval(spawnEnemy,1200);
+
+// tiros
+let bullets=[];
+document.getElementById("shoot").onclick = ()=>{
+    let b = new THREE.Mesh(
+        new THREE.SphereGeometry(0.2),
+        new THREE.MeshBasicMaterial({color:0xffff00})
+    );
+    b.position.copy(camera.position);
+    b.vel = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
+    scene.add(b);
+    bullets.push(b);
+};
+
+// pulo
+document.getElementById("jump").onclick = ()=>{
+    if(camera.position.y <=2){
+        velocityY = 0.2;
     }
 };
 
-// movimento com toque
-document.addEventListener("touchmove", (e) => {
-    camera.rotation.y -= e.touches[0].movementX * 0.002;
+// movimento toque
+document.addEventListener("touchmove",(e)=>{
+    let t = e.touches[0];
+    camera.rotation.y -= t.movementX*0.002;
 });
 
 // loop
-function animate() {
-    requestAnimationFrame(animate);
-    renderer.render(scene, camera);
+function animate(){
+requestAnimationFrame(animate);
+
+// gravidade
+camera.position.y += velocityY;
+velocityY -= 0.01;
+if(camera.position.y<2){
+    camera.position.y=2;
+    velocityY=0;
+}
+
+// tiros
+bullets.forEach((b,bi)=>{
+    b.position.add(b.vel.clone().multiplyScalar(0.5));
+
+    enemies.forEach((e,ei)=>{
+        if(b.position.distanceTo(e.position)<1){
+            scene.remove(e); scene.remove(b);
+            enemies.splice(ei,1);
+            bullets.splice(bi,1);
+            score++;
+        }
+    });
+});
+
+// inimigos seguem você
+enemies.forEach((e,i)=>{
+    e.position.z += 0.05;
+
+    if(e.position.distanceTo(camera.position)<2){
+        vida -= 1;
+    }
+
+    if(e.position.z>5){
+        scene.remove(e);
+        enemies.splice(i,1);
+    }
+});
+
+// HUD
+document.getElementById("hud").innerText =
+"Score: "+score+" | Vida: "+vida;
+
+// game over
+if(vida<=0){
+    alert("Game Over! Score: "+score);
+    location.reload();
+}
+
+renderer.render(scene,camera);
 }
 animate();
 </script>
