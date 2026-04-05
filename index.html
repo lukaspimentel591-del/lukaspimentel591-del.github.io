@@ -1,64 +1,129 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>FPS Realista</title>
+<title>FPS MAX 🔥</title>
+
 <style>
-html, body { width:100%; height:100%; margin:0; overflow:hidden; }
-#renderCanvas { width:100%; height:100%; touch-action:none; }
-#shoot { position:fixed; bottom:20px; right:20px; background:red; padding:20px; color:white; border-radius:50%; }
+html,body{margin:0;height:100%;overflow:hidden;background:black;}
+#canvas{width:100%;height:100%;}
+
+#shoot{
+position:fixed;
+bottom:20px;
+right:20px;
+background:red;
+padding:20px;
+border-radius:50%;
+color:white;
+font-size:20px;
+}
+
+#hud{
+position:fixed;
+top:10px;
+left:10px;
+color:white;
+font-size:18px;
+}
+
+#crosshair{
+position:fixed;
+top:50%;
+left:50%;
+transform:translate(-50%,-50%);
+font-size:30px;
+color:white;
+}
 </style>
 </head>
+
 <body>
 
-<canvas id="renderCanvas"></canvas>
+<div id="hud">Vida:100 | Score:0</div>
 <div id="shoot">🔫</div>
+<div id="crosshair">🎯</div>
+
+<audio id="somTiro" src="https://www.soundjay.com/mechanical/sounds/mechanical-gunshot-01.mp3"></audio>
+
+<canvas id="canvas"></canvas>
 
 <script src="https://cdn.babylonjs.com/babylon.js"></script>
 
 <script>
-const canvas = document.getElementById("renderCanvas");
-const engine = new BABYLON.Engine(canvas, true);
+const canvas = document.getElementById("canvas");
+const engine = new BABYLON.Engine(canvas,true);
 
-const createScene = () => {
-    const scene = new BABYLON.Scene(engine);
+let vida=100;
+let score=0;
 
-    // câmera FPS
-    const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0,2,-10), scene);
-    camera.attachControl(canvas, true);
+const scene = new BABYLON.Scene(engine);
+scene.clearColor = new BABYLON.Color3(0.05,0.05,0.05);
 
-    // luz
-    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1,1,0), scene);
+// câmera FPS
+const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0,2,-10), scene);
+camera.attachControl(canvas,true);
+camera.speed=0.5;
 
-    // chão
-    const ground = BABYLON.MeshBuilder.CreateGround("ground", {width:100, height:100}, scene);
+// luz
+const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0,1,0), scene);
 
-    // inimigo
-    let enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
-    enemy.position.z = 10;
+// chão
+const ground = BABYLON.MeshBuilder.CreateGround("g",{width:200,height:200},scene);
 
-    // tiro
-    document.getElementById("shoot").onclick = () => {
-        if (BABYLON.Vector3.Distance(camera.position, enemy.position) < 15) {
-            enemy.position.z = 20;
+// inimigos
+let enemies=[];
+function spawnEnemy(){
+    let e = BABYLON.MeshBuilder.CreateBox("e",{size:2},scene);
+    e.position = new BABYLON.Vector3(Math.random()*20-10,1,20);
+    enemies.push(e);
+}
+setInterval(spawnEnemy,1200);
+
+// tiro completo
+document.getElementById("shoot").onclick=()=>{
+    document.getElementById("somTiro").play();
+
+    // efeito visual
+    let flash = BABYLON.MeshBuilder.CreateSphere("f",{diameter:0.5},scene);
+    flash.position = camera.position.clone();
+    setTimeout(()=>flash.dispose(),100);
+
+    enemies.forEach((e,i)=>{
+        let dist = BABYLON.Vector3.Distance(camera.position,e.position);
+        if(dist<15){
+            e.dispose();
+            enemies.splice(i,1);
+            score++;
         }
-    };
-
-    scene.onBeforeRenderObservable.add(() => {
-        enemy.position.z -= 0.05;
     });
-
-    return scene;
 };
 
-const scene = createScene();
+// loop
+scene.onBeforeRenderObservable.add(()=>{
 
-engine.runRenderLoop(() => {
-    scene.render();
+    enemies.forEach((e,i)=>{
+        let dir = camera.position.subtract(e.position).normalize();
+        e.moveWithCollisions(dir.scale(0.08));
+
+        if(BABYLON.Vector3.Distance(camera.position,e.position)<2){
+            vida -= 0.5;
+        }
+    });
+
+    // HUD
+    document.getElementById("hud").innerText=
+    "Vida:"+Math.floor(vida)+" | Score:"+score;
+
+    // game over
+    if(vida<=0){
+        alert("💀 Game Over! Score: "+score);
+        location.reload();
+    }
+
 });
 
-window.addEventListener("resize", () => {
-    engine.resize();
-});
+engine.runRenderLoop(()=>scene.render());
+window.addEventListener("resize",()=>engine.resize());
 </script>
 
 </body>
