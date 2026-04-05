@@ -1,147 +1,64 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>FPS 3D COMPLETO 🔥</title>
+<title>FPS Realista</title>
 <style>
-body { margin:0; overflow:hidden; background:black; }
-
-#shoot { position:fixed; bottom:20px; right:20px; padding:20px; background:red; color:white; border-radius:50%; }
-#jump { position:fixed; bottom:20px; left:20px; padding:20px; background:blue; color:white; border-radius:50%; }
-#hud { position:fixed; top:10px; left:10px; color:white; }
-
+html, body { width:100%; height:100%; margin:0; overflow:hidden; }
+#renderCanvas { width:100%; height:100%; touch-action:none; }
+#shoot { position:fixed; bottom:20px; right:20px; background:red; padding:20px; color:white; border-radius:50%; }
 </style>
 </head>
 <body>
 
+<canvas id="renderCanvas"></canvas>
 <div id="shoot">🔫</div>
-<div id="jump">⬆️</div>
-<div id="hud">Score: 0 | Vida: 100</div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script src="https://cdn.babylonjs.com/babylon.js"></script>
 
 <script>
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(75, innerWidth/innerHeight,0.1,1000);
-let renderer = new THREE.WebGLRenderer();
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
+const canvas = document.getElementById("renderCanvas");
+const engine = new BABYLON.Engine(canvas, true);
 
-// chão
-let floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(200,200),
-    new THREE.MeshBasicMaterial({color:0x333333})
-);
-floor.rotation.x = -Math.PI/2;
-scene.add(floor);
+const createScene = () => {
+    const scene = new BABYLON.Scene(engine);
 
-// paredes
-for(let i=0;i<10;i++){
-    let wall = new THREE.Mesh(
-        new THREE.BoxGeometry(5,5,1),
-        new THREE.MeshBasicMaterial({color:0x555555})
-    );
-    wall.position.set(Math.random()*50-25,2,-Math.random()*50);
-    scene.add(wall);
-}
+    // câmera FPS
+    const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0,2,-10), scene);
+    camera.attachControl(canvas, true);
 
-// player
-camera.position.y = 2;
-let velocityY = 0;
-let vida = 100;
-let score = 0;
+    // luz
+    const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(1,1,0), scene);
 
-// inimigos
-let enemies=[];
-function spawnEnemy(){
-    let e = new THREE.Mesh(
-        new THREE.BoxGeometry(),
-        new THREE.MeshBasicMaterial({color:0xff0000})
-    );
-    e.position.set(Math.random()*40-20,1,-30);
-    scene.add(e);
-    enemies.push(e);
-}
-setInterval(spawnEnemy,1200);
+    // chão
+    const ground = BABYLON.MeshBuilder.CreateGround("ground", {width:100, height:100}, scene);
 
-// tiros
-let bullets=[];
-document.getElementById("shoot").onclick = ()=>{
-    let b = new THREE.Mesh(
-        new THREE.SphereGeometry(0.2),
-        new THREE.MeshBasicMaterial({color:0xffff00})
-    );
-    b.position.copy(camera.position);
-    b.vel = new THREE.Vector3(0,0,-1).applyQuaternion(camera.quaternion);
-    scene.add(b);
-    bullets.push(b);
-};
+    // inimigo
+    let enemy = BABYLON.MeshBuilder.CreateBox("enemy", {}, scene);
+    enemy.position.z = 10;
 
-// pulo
-document.getElementById("jump").onclick = ()=>{
-    if(camera.position.y <=2){
-        velocityY = 0.2;
-    }
-};
-
-// movimento toque
-document.addEventListener("touchmove",(e)=>{
-    let t = e.touches[0];
-    camera.rotation.y -= t.movementX*0.002;
-});
-
-// loop
-function animate(){
-requestAnimationFrame(animate);
-
-// gravidade
-camera.position.y += velocityY;
-velocityY -= 0.01;
-if(camera.position.y<2){
-    camera.position.y=2;
-    velocityY=0;
-}
-
-// tiros
-bullets.forEach((b,bi)=>{
-    b.position.add(b.vel.clone().multiplyScalar(0.5));
-
-    enemies.forEach((e,ei)=>{
-        if(b.position.distanceTo(e.position)<1){
-            scene.remove(e); scene.remove(b);
-            enemies.splice(ei,1);
-            bullets.splice(bi,1);
-            score++;
+    // tiro
+    document.getElementById("shoot").onclick = () => {
+        if (BABYLON.Vector3.Distance(camera.position, enemy.position) < 15) {
+            enemy.position.z = 20;
         }
+    };
+
+    scene.onBeforeRenderObservable.add(() => {
+        enemy.position.z -= 0.05;
     });
+
+    return scene;
+};
+
+const scene = createScene();
+
+engine.runRenderLoop(() => {
+    scene.render();
 });
 
-// inimigos seguem você
-enemies.forEach((e,i)=>{
-    e.position.z += 0.05;
-
-    if(e.position.distanceTo(camera.position)<2){
-        vida -= 1;
-    }
-
-    if(e.position.z>5){
-        scene.remove(e);
-        enemies.splice(i,1);
-    }
+window.addEventListener("resize", () => {
+    engine.resize();
 });
-
-// HUD
-document.getElementById("hud").innerText =
-"Score: "+score+" | Vida: "+vida;
-
-// game over
-if(vida<=0){
-    alert("Game Over! Score: "+score);
-    location.reload();
-}
-
-renderer.render(scene,camera);
-}
-animate();
 </script>
 
 </body>
