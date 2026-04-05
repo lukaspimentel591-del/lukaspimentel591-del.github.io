@@ -1,119 +1,116 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Player 4EVER 🎧</title>
+    <title>Jogo de Tiro 🔫</title>
 
     <style>
         body {
             margin: 0;
-            background: linear-gradient(black, purple);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            color: white;
-            font-family: Arial;
+            overflow: hidden;
+            background: black;
         }
 
-        .player {
-            background: #111;
-            padding: 25px;
-            border-radius: 20px;
-            width: 320px;
-            text-align: center;
-            box-shadow: 0 0 20px purple;
+        #player {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background: blue;
+            bottom: 10px;
+            left: 50%;
         }
 
-        img {
-            width: 100%;
-            border-radius: 15px;
+        .bullet {
+            position: absolute;
+            width: 5px;
+            height: 10px;
+            background: yellow;
         }
 
-        h1 {
-            margin: 10px 0;
-        }
-
-        .controls button {
-            margin: 5px;
-            padding: 10px;
-            border: none;
-            background: purple;
-            color: white;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-
-        input[type="range"] {
-            width: 100%;
+        .enemy {
+            position: absolute;
+            width: 40px;
+            height: 40px;
+            background: red;
+            top: 0;
         }
     </style>
-
 </head>
 <body>
 
-<div class="player">
-
-    <!-- 🔧 EDITÁVEL -->
-    <img src="capa.jpg">
-    <h1 id="titulo">4EVER 🎧</h1>
-    <p id="artista">Lukas</p>
-
-    <audio id="musica">
-        <source src="4ever.mp3" type="audio/mpeg">
-    </audio>
-
-    <!-- BOTÕES -->
-    <div class="controls">
-        <button onclick="play()">▶️</button>
-        <button onclick="pause()">⏸</button>
-    </div>
-
-    <!-- BARRA DE PROGRESSO -->
-    <input type="range" id="progresso" value="0">
-
-    <!-- VOLUME -->
-    <p>Volume</p>
-    <input type="range" id="volume" min="0" max="1" step="0.1" value="1">
-
-    <p id="tempo">00:00</p>
-
-</div>
+<div id="player"></div>
 
 <script>
+let player = document.getElementById("player");
+let bullets = [];
+let enemies = [];
+let playerX = window.innerWidth / 2;
 
-let musica = document.getElementById("musica");
-let progresso = document.getElementById("progresso");
-let volume = document.getElementById("volume");
+document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") playerX -= 20;
+    if (e.key === "ArrowRight") playerX += 20;
 
-function play() {
-    musica.play();
+    if (e.key === " ") shoot();
+
+    player.style.left = playerX + "px";
+});
+
+function shoot() {
+    let bullet = document.createElement("div");
+    bullet.classList.add("bullet");
+    bullet.style.left = playerX + 20 + "px";
+    bullet.style.top = window.innerHeight - 60 + "px";
+
+    document.body.appendChild(bullet);
+    bullets.push(bullet);
 }
 
-function pause() {
-    musica.pause();
+function spawnEnemy() {
+    let enemy = document.createElement("div");
+    enemy.classList.add("enemy");
+    enemy.style.left = Math.random() * window.innerWidth + "px";
+
+    document.body.appendChild(enemy);
+    enemies.push(enemy);
 }
 
-// Atualiza progresso
-musica.addEventListener("timeupdate", () => {
-    progresso.value = (musica.currentTime / musica.duration) * 100;
+setInterval(spawnEnemy, 1000);
 
-    let min = Math.floor(musica.currentTime / 60);
-    let sec = Math.floor(musica.currentTime % 60);
-    if(sec < 10) sec = "0" + sec;
+function gameLoop() {
+    bullets.forEach((b, i) => {
+        b.style.top = b.offsetTop - 10 + "px";
 
-    document.getElementById("tempo").innerText = min + ":" + sec;
-});
+        enemies.forEach((e, j) => {
+            if (
+                b.offsetTop < e.offsetTop + 40 &&
+                b.offsetLeft > e.offsetLeft &&
+                b.offsetLeft < e.offsetLeft + 40
+            ) {
+                b.remove();
+                e.remove();
+                bullets.splice(i, 1);
+                enemies.splice(j, 1);
+            }
+        });
 
-// Controlar barra
-progresso.addEventListener("input", () => {
-    musica.currentTime = (progresso.value / 100) * musica.duration;
-});
+        if (b.offsetTop < 0) {
+            b.remove();
+            bullets.splice(i, 1);
+        }
+    });
 
-// Volume
-volume.addEventListener("input", () => {
-    musica.volume = volume.value;
-});
+    enemies.forEach((e, i) => {
+        e.style.top = e.offsetTop + 3 + "px";
 
+        if (e.offsetTop > window.innerHeight) {
+            e.remove();
+            enemies.splice(i, 1);
+        }
+    });
+
+    requestAnimationFrame(gameLoop);
+}
+
+gameLoop();
 </script>
 
 </body>
