@@ -1,22 +1,11 @@
 <!DOCTYPE html>
 <html>
 <head>
-<title>FPS MAX 🔥</title>
+<title>FPS REALISTA MAX 🔥</title>
 
 <style>
 html,body{margin:0;height:100%;overflow:hidden;background:black;}
 #canvas{width:100%;height:100%;}
-
-#shoot{
-position:fixed;
-bottom:20px;
-right:20px;
-background:red;
-padding:20px;
-border-radius:50%;
-color:white;
-font-size:20px;
-}
 
 #hud{
 position:fixed;
@@ -26,12 +15,32 @@ color:white;
 font-size:18px;
 }
 
+#shoot{
+position:fixed;
+bottom:20px;
+right:20px;
+background:red;
+padding:20px;
+border-radius:50%;
+color:white;
+}
+
+#weapon{
+position:fixed;
+bottom:20px;
+left:20px;
+background:blue;
+padding:15px;
+border-radius:10px;
+color:white;
+}
+
 #crosshair{
 position:fixed;
 top:50%;
 left:50%;
 transform:translate(-50%,-50%);
-font-size:30px;
+font-size:25px;
 color:white;
 }
 </style>
@@ -39,11 +48,10 @@ color:white;
 
 <body>
 
-<div id="hud">Vida:100 | Score:0</div>
+<div id="hud">Vida:100 | Score:0 | Arma:Pistola</div>
 <div id="shoot">🔫</div>
-<div id="crosshair">🎯</div>
-
-<audio id="somTiro" src="https://www.soundjay.com/mechanical/sounds/mechanical-gunshot-01.mp3"></audio>
+<div id="weapon">Trocar 🔄</div>
+<div id="crosshair">+</div>
 
 <canvas id="canvas"></canvas>
 
@@ -56,8 +64,11 @@ const engine = new BABYLON.Engine(canvas,true);
 let vida=100;
 let score=0;
 
+let armaAtual="Pistola";
+let dano=1;
+
 const scene = new BABYLON.Scene(engine);
-scene.clearColor = new BABYLON.Color3(0.05,0.05,0.05);
+scene.clearColor = new BABYLON.Color3(0.02,0.02,0.02);
 
 // câmera FPS
 const camera = new BABYLON.UniversalCamera("cam", new BABYLON.Vector3(0,2,-10), scene);
@@ -67,56 +78,108 @@ camera.speed=0.5;
 // luz
 const light = new BABYLON.HemisphericLight("light", new BABYLON.Vector3(0,1,0), scene);
 
-// chão
-const ground = BABYLON.MeshBuilder.CreateGround("g",{width:200,height:200},scene);
+// chão com textura
+let ground = BABYLON.MeshBuilder.CreateGround("g",{width:200,height:200},scene);
+let groundMat = new BABYLON.StandardMaterial("mat",scene);
+groundMat.diffuseTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/grass.jpg",scene);
+ground.material = groundMat;
+
+// paredes simples
+for(let i=0;i<20;i++){
+    let wall = BABYLON.MeshBuilder.CreateBox("w",{size:5},scene);
+    wall.position = new BABYLON.Vector3(Math.random()*50-25,2,Math.random()*50-25);
+}
 
 // inimigos
 let enemies=[];
 function spawnEnemy(){
     let e = BABYLON.MeshBuilder.CreateBox("e",{size:2},scene);
+
+    let mat = new BABYLON.StandardMaterial("m",scene);
+    mat.diffuseTexture = new BABYLON.Texture("https://assets.babylonjs.com/environments/rock.png",scene);
+    e.material = mat;
+
     e.position = new BABYLON.Vector3(Math.random()*20-10,1,20);
+    e.hp = 3;
+
     enemies.push(e);
 }
 setInterval(spawnEnemy,1200);
 
-// tiro completo
+// trocar arma
+document.getElementById("weapon").onclick=()=>{
+    if(armaAtual==="Pistola"){
+        armaAtual="Rifle";
+        dano=2;
+    }else{
+        armaAtual="Pistola";
+        dano=1;
+    }
+};
+
+// tiro
 document.getElementById("shoot").onclick=()=>{
-    document.getElementById("somTiro").play();
-
-    // efeito visual
-    let flash = BABYLON.MeshBuilder.CreateSphere("f",{diameter:0.5},scene);
-    flash.position = camera.position.clone();
-    setTimeout(()=>flash.dispose(),100);
-
     enemies.forEach((e,i)=>{
         let dist = BABYLON.Vector3.Distance(camera.position,e.position);
         if(dist<15){
-            e.dispose();
-            enemies.splice(i,1);
-            score++;
+            e.hp -= dano;
+            if(e.hp<=0){
+                e.dispose();
+                enemies.splice(i,1);
+                score++;
+            }
         }
     });
 };
 
-// loop
+// IA melhorada
 scene.onBeforeRenderObservable.add(()=>{
 
     enemies.forEach((e,i)=>{
-        let dir = camera.position.subtract(e.position).normalize();
-        e.moveWithCollisions(dir.scale(0.08));
 
-        if(BABYLON.Vector3.Distance(camera.position,e.position)<2){
-            vida -= 0.5;
+        let distance = BABYLON.Vector3.Distance(camera.position,e.position);
+
+        if(!e.state) e.state="andar";
+
+        if(distance < 5){
+            e.state="atacar";
+        } else if(distance < 15){
+            e.state="seguir";
+        } else {
+            e.state="andar";
         }
+
+        if(e.state==="seguir"){
+            let dir = camera.position.subtract(e.position).normalize();
+            dir.x += (Math.random()-0.5)*0.2;
+            dir.z += (Math.random()-0.5)*0.2;
+            e.moveWithCollisions(dir.scale(0.08));
+        }
+
+        if(e.state==="andar"){
+            if(!e.randomDir){
+                e.randomDir = new BABYLON.Vector3(
+                    Math.random()-0.5,0,Math.random()-0.5
+                ).normalize();
+            }
+            e.moveWithCollisions(e.randomDir.scale(0.03));
+        }
+
+        if(e.state==="atacar"){
+            let dir = camera.position.subtract(e.position).normalize();
+            e.moveWithCollisions(dir.scale(0.12));
+            vida -= 0.6;
+        }
+
     });
 
     // HUD
     document.getElementById("hud").innerText=
-    "Vida:"+Math.floor(vida)+" | Score:"+score;
+    "Vida:"+Math.floor(vida)+" | Score:"+score+" | Arma:"+armaAtual;
 
     // game over
     if(vida<=0){
-        alert("💀 Game Over! Score: "+score);
+        alert("Game Over! Score: "+score);
         location.reload();
     }
 
