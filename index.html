@@ -1,116 +1,70 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Jogo de Tiro 🔫</title>
-
+    <title>FPS 3D 🔫</title>
     <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            background: black;
-        }
-
-        #player {
-            position: absolute;
-            width: 50px;
-            height: 50px;
-            background: blue;
-            bottom: 10px;
-            left: 50%;
-        }
-
-        .bullet {
-            position: absolute;
-            width: 5px;
-            height: 10px;
-            background: yellow;
-        }
-
-        .enemy {
-            position: absolute;
-            width: 40px;
-            height: 40px;
+        body { margin: 0; overflow: hidden; }
+        #btn {
+            position: fixed;
+            bottom: 20px;
+            left: 20px;
+            padding: 15px;
             background: red;
-            top: 0;
+            color: white;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
 
-<div id="player"></div>
+<div id="btn">ATIRAR 🔫</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
 
 <script>
-let player = document.getElementById("player");
-let bullets = [];
-let enemies = [];
-let playerX = window.innerWidth / 2;
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 1000);
+let renderer = new THREE.WebGLRenderer();
 
-document.addEventListener("keydown", (e) => {
-    if (e.key === "ArrowLeft") playerX -= 20;
-    if (e.key === "ArrowRight") playerX += 20;
+renderer.setSize(window.innerWidth, window.innerHeight);
+document.body.appendChild(renderer.domElement);
 
-    if (e.key === " ") shoot();
+// chão
+let floorGeo = new THREE.PlaneGeometry(50, 50);
+let floorMat = new THREE.MeshBasicMaterial({color: 0x00ff00});
+let floor = new THREE.Mesh(floorGeo, floorMat);
+floor.rotation.x = -Math.PI / 2;
+scene.add(floor);
 
-    player.style.left = playerX + "px";
+// inimigo
+let enemyGeo = new THREE.BoxGeometry();
+let enemyMat = new THREE.MeshBasicMaterial({color: 0xff0000});
+let enemy = new THREE.Mesh(enemyGeo, enemyMat);
+enemy.position.z = -5;
+scene.add(enemy);
+
+camera.position.y = 2;
+
+// botão tiro (funciona no iPhone)
+document.getElementById("btn").onclick = () => {
+    if (enemy.position.z < -1) {
+        enemy.position.z += 1;
+    } else {
+        enemy.position.z = -10;
+    }
+};
+
+// movimento com toque
+document.addEventListener("touchmove", (e) => {
+    camera.rotation.y -= e.touches[0].movementX * 0.002;
 });
 
-function shoot() {
-    let bullet = document.createElement("div");
-    bullet.classList.add("bullet");
-    bullet.style.left = playerX + 20 + "px";
-    bullet.style.top = window.innerHeight - 60 + "px";
-
-    document.body.appendChild(bullet);
-    bullets.push(bullet);
+// loop
+function animate() {
+    requestAnimationFrame(animate);
+    renderer.render(scene, camera);
 }
-
-function spawnEnemy() {
-    let enemy = document.createElement("div");
-    enemy.classList.add("enemy");
-    enemy.style.left = Math.random() * window.innerWidth + "px";
-
-    document.body.appendChild(enemy);
-    enemies.push(enemy);
-}
-
-setInterval(spawnEnemy, 1000);
-
-function gameLoop() {
-    bullets.forEach((b, i) => {
-        b.style.top = b.offsetTop - 10 + "px";
-
-        enemies.forEach((e, j) => {
-            if (
-                b.offsetTop < e.offsetTop + 40 &&
-                b.offsetLeft > e.offsetLeft &&
-                b.offsetLeft < e.offsetLeft + 40
-            ) {
-                b.remove();
-                e.remove();
-                bullets.splice(i, 1);
-                enemies.splice(j, 1);
-            }
-        });
-
-        if (b.offsetTop < 0) {
-            b.remove();
-            bullets.splice(i, 1);
-        }
-    });
-
-    enemies.forEach((e, i) => {
-        e.style.top = e.offsetTop + 3 + "px";
-
-        if (e.offsetTop > window.innerHeight) {
-            e.remove();
-            enemies.splice(i, 1);
-        }
-    });
-
-    requestAnimationFrame(gameLoop);
-}
-
-gameLoop();
+animate();
 </script>
 
 </body>
